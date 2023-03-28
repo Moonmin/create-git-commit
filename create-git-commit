@@ -1,0 +1,132 @@
+# -*- coding: utf-8 -*-
+#!/usr/bin/env python3.9 
+
+import os
+import random
+import subprocess
+import shutil
+from datetime import datetime, timedelta
+
+# 定义提交人员
+authors = [
+    "mary",
+    "linda",
+]
+
+# 统计文件夹 A 中的 Java 文件数量
+# java_files_count = 0
+# for folder_name, subfolders, filenames in os.walk("A"):
+#     for filename in filenames:
+#         if filename.endswith(".java"):
+#             java_files_count += 1
+
+# print(f"文件夹 A 中的 Java 文件数量为：{java_files_count}")
+
+# 生成时间戳
+# start_time = datetime(2022, 4, 1, 9, 0, 0)
+# end_time = datetime(2022, 5, 31, 21, 0, 0)
+
+# time_range = end_time - start_time
+# timestamps = []
+# # for i in range(10):
+# #     rand_time = start_time + timedelta(seconds=random.randint(0, int(time_range.total_seconds())))
+# #     timestamps.append(int(rand_time.timestamp()))
+# delta = timedelta(minutes=1)
+# while start_time <= end_time:
+#     if start_time.hour >= 9 and start_time.hour < 21:
+#         timestamps.append(int(start_time.timestamp()))
+#     start_time += delta
+
+
+
+# 生成时间戳
+start_time = datetime(2022, 3, 22, 9, 0, 0)
+end_time = datetime(2022, 10, 25, 21, 0, 0)
+timestamps = []
+delta = timedelta(minutes=1)
+
+while start_time <= end_time:
+    if start_time.hour >= 9 and start_time.hour < 21:
+        # 生成随机秒数
+        random_second = random.randint(0, 59)
+        # 生成随机时间间隔
+        random_delta = timedelta(seconds=random.uniform(0, 60))
+        # 创建新的 timedelta 对象，并将其添加到 start_time 对象中
+        new_delta = timedelta(seconds=random_second) + random_delta
+        # 将新的 timedelta 对象添加到日期时间对象中，并生成时间戳
+        ts = int((start_time + new_delta).timestamp())
+        timestamps.append(ts)
+    start_time += delta
+
+# 随机打乱时间戳的顺序
+random.shuffle(timestamps)
+
+# 从中随机选择10个时间戳并排序
+random_timestamps = sorted(random.sample(timestamps, k=200))
+
+# #按时间排序
+# timestamps = sorted(timestamps)    
+
+# timestamps = sorted([random.randint(start_timestamp, end_timestamp) for _ in range(10)])
+
+# 生成提交记录
+for i, timestamp in enumerate(random_timestamps):
+    # 从文件夹中随机选取 2-3 个 Java 文件
+    # java_files = random.sample([os.path.join(folder_name, filename) for folder_name, subfolders, filenames in os.walk("a") for filename in filenames if filename.endswith(".*")], random.randint(2, 3))
+
+    file_list = []
+    for folder_name, subfolders, filenames in os.walk("a"):
+        for filename in filenames:
+            if not filename.startswith(".") and not os.path.isdir(os.path.join(folder_name, filename)):
+                file_list.append(os.path.join(folder_name, filename))
+
+    random_files = random.sample(file_list, random.randint(2, 3))
+
+
+
+
+    # 将选中的 Java 文件复制到文件夹 B 中，并对文件内容进行修改
+    for file_path in random_files:
+        dst_path = os.path.join("/dir-b", os.path.relpath(file_path, "a"))
+        dst_dir = os.path.dirname(dst_path)
+        if not os.path.exists(dst_dir):
+            os.makedirs(dst_dir)
+        shutil.copy2(file_path, dst_path)
+        # with open(dst_path, "r+") as dst_file:
+        #     content = dst_file.read()
+        #     dst_file.seek(0)
+        #     dst_file.truncate()
+        #     dst_file.write(content.replace("old_string", "new_string"))
+
+        # 添加文件到 Git 暂存区
+        subprocess.run(f"git add {dst_path}", cwd="/dir-b", shell=True)
+        
+
+    # # 随机生成提交者
+    # author = random.choice(authors)
+    # # 设置提交者和提交时间
+    # date = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S %z")
+    # subprocess.run(f'git -c "user.name={author}" -c "user.email={author}@eternalinfo.cn" -c "commit.gpgsign=false" -c "commit.timestamp={timestamp}" commit -m "commit {i+1}" --date="{date}"', cwd="/dir-b", shell=True)
+    
+     
+    # 随机生成提交者和提交时间
+    author = random.choice(authors)
+
+    date = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S %z")
+    # 设置提交者和提交时间
+    commit_env = os.environ.copy()
+    commit_env["GIT_AUTHOR_DATE"] = date
+    commit_env["GIT_COMMITTER_DATE"] = date
+    # 提交并指定提交者和提交时间
+    subprocess.run(f'git commit -m "Commit {file_path}" --author="{author} <{author}@eternalinfo.cn>"', cwd="/dir-b", shell=True, env=commit_env)
+    # 推送并指定提交时间
+    push_env = os.environ.copy()
+    push_env["GIT_COMMITTER_DATE"] = date
+    push_result = subprocess.run(f'git push origin 1.0.0', cwd="/dir-b", shell=True, env=push_env, capture_output=True, text=True)
+    print(push_result.stdout)
+    print(push_result.stderr)
+    # 删除提交者和提交时间的环境变量
+    del commit_env["GIT_AUTHOR_DATE"]
+    del commit_env["GIT_COMMITTER_DATE"]
+
+   
